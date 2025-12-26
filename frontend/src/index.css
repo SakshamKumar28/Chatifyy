@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+
+}
+
+:root {
+  --primary-color: #FCF8F8;
+  --secondary-color: #FBEFEF;
+  --message-outgoing: #F5AFAF;
+  --message-incoming: #F9DFDF;
+  --message-outgoing-hover: #F7C3C3;
+  --message-incoming-hover: #FBDDDD;
+
+  --animated-dots: #D97B7B;
+}
