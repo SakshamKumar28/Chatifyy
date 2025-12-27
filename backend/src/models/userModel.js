@@ -28,6 +28,7 @@ const userSchema = new mongoose.Schema({
             return "https://cdn-icons-png.flaticon.com/512/149/149288.png";
         }
     },
+    friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 }, {timestamps: true});
 
 const User = mongoose.model('User', userSchema);
