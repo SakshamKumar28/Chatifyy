@@ -1,4 +1,4 @@
-# Chat App
+# Chatifyy
 
 A full-stack real-time chat application built with Node.js/Express and React/TypeScript.
 
