@@ -5,7 +5,7 @@ const messageSchema = new mongoose.Schema({
         ref: 'User',
         required: true,
     },
-    reciever: {
+    receiver: {
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'User',
         required: true,
@@ -17,7 +17,7 @@ const messageSchema = new mongoose.Schema({
         trim: true,
 
     }
-}, { timstamps: true });
+}, { timestamps: true });
 
 const Message = mongoose.model('Message', messageSchema);
 

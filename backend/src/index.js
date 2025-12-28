@@ -25,7 +25,11 @@ const server = http.createServer(app);
 /* ---------------- SOCKET SETUP ---------------- */
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: (origin, callback) => {
+      // Allow any origin for development
+      callback(null, true); 
+    },
+    methods: ["GET", "POST"],
     credentials: true
   }
 });
@@ -37,8 +41,17 @@ socketHandler(io);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Inject socket io into request
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+      // Allow any origin for development
+      callback(null, true); 
+  },
   credentials: true
 }));
 

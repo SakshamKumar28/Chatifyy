@@ -1,22 +1,35 @@
-const socketHandler = (io) =>{
-    io.on('connection', (socket) => {
-        console.log('Client Connected: ', socket.id);
+import Message from '../models/messageModel.js';
+import Chat from '../models/chatModel.js';
 
-        socket.on('joinRoom', (userId)=>{
-            socket.join(userId);
-            console.log(`User with ID: ${userId} joined room: ${socket.id}`);
+const socketHandler = (io) => {
+  io.on('connection', (socket) => {
+    console.log(`🟢 Client connected: ${socket.id}`);
 
-        });
-        socket.on('sendMessage', (messageData)=>{
-            const { recieverId } = messageData;
-            io.to(recieverId).emit('receiveMessage', messageData);
-            console.log(`Message sent to user with ID: ${recieverId}`);
-        });
+    /* ---------------- JOIN ROOM ---------------- */
+    socket.on('joinRoom', (userId) => {
+      if (!userId) {
+        console.warn(`⚠️ joinRoom called without userId`);
+        return;
+      }
 
-        socket.on('disconnect', () => {
-            console.log('Client Disconnected: ', socket.id);
-        });
-    })
-}
+      socket.join(userId);
+      socket.userId = userId; // store for reference
+      console.log(`👤 User ${userId} joined room ${userId}`);
+    });
+
+    /* ---------------- SEND MESSAGE ---------------- */
+    socket.on('sendMessage', async (messageData, callback) => {
+        // Legacy: This is now handled by POST /api/messages
+        // Kept only if needed for typing indicators or other signals
+        console.warn('⚠️ Socket sendMessage event is deprecated. Use REST API.');
+        if (callback) callback({ status: 'error', message: 'Use REST API' });
+    });
+
+    /* ---------------- DISCONNECT ---------------- */
+    socket.on('disconnect', () => {
+      console.log(`🔴 Client disconnected: ${socket.id} (user: ${socket.userId || 'unknown'})`);
+    });
+  });
+};
 
 export default socketHandler;
