@@ -35,7 +35,6 @@ const Login = () => {
     }
 
   return (
-  return (
     <div className='h-full w-full flex justify-center items-center bg-[var(--primary-color)] relative overflow-hidden'>
         {arr.map((i)=>{
             return(
