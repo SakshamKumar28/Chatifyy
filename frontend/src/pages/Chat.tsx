@@ -503,10 +503,10 @@ const Chat = () => {
     <div className="h-screen w-screen overflow-hidden relative flex bg-background">
       
       {/* ---------------- SIDEBAR ---------------- */}
-      <div className={`${showSidebarMobile ? 'flex' : 'hidden'} md:flex w-full md:w-[30%] lg:w-[25%] bg-[var(--message-incoming)] flex-col border-r border-[#FBEFEF]`}>
+      <div className={`${showSidebarMobile ? 'flex' : 'hidden'} md:flex w-full md:w-[30%] lg:w-[25%] bg-white/80 backdrop-blur-md flex-col border-r border-gray-100 z-10`}>
         
         {/* HEADER */}
-        <div className="h-[70px] flex items-center justify-between px-6 border-b border-[#FBEFEF] flex-shrink-0 bg-white/50 backdrop-blur-sm">
+        <div className="h-[80px] flex items-center justify-between px-6 flex-shrink-0">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => setIsDialogOpen(!isDialogOpen)}>
             <div className="relative">
                 <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
@@ -671,7 +671,7 @@ const Chat = () => {
                  </div>
             )}
             {activeTab === 'FRIENDS' && friends.map(u => (
-                <div key={u._id} onClick={() => setSelectedChat(u)} className={`flex items-center justify-between p-3 mb-1 rounded-xl cursor-pointer hover:bg-[var(--secondary-color)] transition-all ${selectedChat?._id === u._id ? 'bg-[var(--message-outgoing)] shadow-sm ring-1 ring-[#D97B7B]/20' : ''}`}>
+                <div key={u._id} onClick={() => setSelectedChat(u)} className={`flex items-center justify-between p-3 mb-2 rounded-2xl cursor-pointer transition-all duration-200 ${selectedChat?._id === u._id ? 'bg-[var(--message-outgoing)] shadow-md shadow-pink-100 text-white' : 'hover:bg-gray-50'}`}>
                     <div className="flex items-center gap-4">
                         {u.isGroup ? (
                             <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center border-2 border-white">
@@ -684,13 +684,13 @@ const Chat = () => {
                             </Avatar>
                         )}
                         <div>
-                            <p className="font-semibold text-sm text-gray-800">{u.isGroup ? u.groupName : u.username}</p>
+                            <p className={`font-bold text-sm ${selectedChat?._id === u._id ? 'text-white' : 'text-gray-800'}`}>{u.isGroup ? u.groupName : u.username}</p>
                             {!u.isGroup && (
-                                <p className={`text-xs ${onlineUsers.includes(u._id) ? 'text-green-500' : 'text-gray-400'}`}>
+                                <p className={`text-xs ${selectedChat?._id === u._id ? 'text-white/80' : onlineUsers.includes(u._id) ? 'text-green-500' : 'text-gray-400'}`}>
                                     {onlineUsers.includes(u._id) ? 'Online' : 'Offline'}
                                 </p>
                             )}
-                            {u.isGroup && <p className="text-xs text-gray-400">Group</p>}
+                            {u.isGroup && <p className={`text-xs ${selectedChat?._id === u._id ? 'text-white/80' : 'text-gray-400'}`}>Group</p>}
                         </div>
                     </div>
                     
@@ -768,7 +768,7 @@ const Chat = () => {
       </div>
 
       {/* ---------------- MAIN WINDOW ---------------- */}
-      <div className={`${showMainPanelMobile ? 'flex' : 'hidden'} md:flex w-full md:w-[70%] lg:w-[75%] bg-white flex-col relative`}>
+      <div className={`${showMainPanelMobile ? 'flex' : 'hidden'} md:flex w-full md:w-[70%] lg:w-[75%] bg-[#FDFDFD] flex-col relative`}>
         
                 {/* ----- ANONYMOUS MODE VIEW ----- */}
                 {activeTab === 'ANONYMOUS' ? (

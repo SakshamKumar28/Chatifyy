@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { toast } from "sonner"
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
+import { Mail, Lock, Loader2 } from 'lucide-react';
 import api from "../utils/api"
 
 const Login = () => {
@@ -34,6 +35,7 @@ const Login = () => {
     }
 
   return (
+  return (
     <div className='h-full w-full flex justify-center items-center bg-[var(--primary-color)] relative overflow-hidden'>
         {arr.map((i)=>{
             return(
@@ -57,39 +59,59 @@ const Login = () => {
                 />
             )
         })}
-        <div className="z-10 w-[90%] sm:w-[70%] md:w-[50%] lg:w-[35vw] min-h-[50vh] h-auto py-8 md:h-[82vh] md:py-0 bg-[var(--secondary-color)] shadow-xl rounded-2xl flex flex-col items-center justify-evenly">
-            <h1 className='text-3xl font-bold text-[var(--message-outgoing)]'>Welcome Back</h1>
-            <form onSubmit={handleSubmit} className='flex flex-col w-[85%] sm:w-3/4 gap-5'>
+        <div className="z-10 w-[90%] sm:w-[70%] md:w-[50%] lg:w-[35vw] h-auto py-10 bg-white/90 backdrop-blur-sm shadow-2xl rounded-2xl flex flex-col items-center justify-center p-6 sm:p-10">
+            <h1 className='text-3xl font-bold text-gray-800 mb-2'>Welcome Back</h1>
+            <p className="text-gray-500 mb-8 text-sm">Sign in to continue to Chatifyy</p>
+            
+            <form onSubmit={handleSubmit} className='flex flex-col w-full gap-5'>
                 {error && (
-                    <div className='bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded-lg text-sm'>
+                    <div className='bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm'>
                         {error}
                     </div>
                 )}
-                <input 
-                    onChange={(e)=>{setEmail(e.target.value)}}
-                    type="email" 
-                    placeholder='Email' 
-                    value={email}
-                    disabled={loading}
-                    className='px-4 py-3 text-[0.95rem] rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[var(--message-outgoing)] placeholder-gray-400 disabled:bg-gray-100'
-                />
-                <input 
-                    onChange={(e)=>{setPassword(e.target.value)}} 
-                    type="password" 
-                    placeholder='Password' 
-                    value={password}
-                    disabled={loading}
-                    className='px-4 py-3 text-[0.95rem] rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[var(--message-outgoing)] placeholder-gray-400 disabled:bg-gray-100'
-                />
+                
+                {/* Email */}
+                <div className="relative">
+                    <Mail className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                    <input 
+                        onChange={(e)=>{setEmail(e.target.value)}}
+                        type="email" 
+                        placeholder='Email Address' 
+                        value={email}
+                        disabled={loading}
+                        className='w-full pl-10 pr-4 py-3 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--message-outgoing)] focus:border-transparent transition-all placeholder-gray-400'
+                    />
+                </div>
+
+                {/* Password */}
+                <div className="relative">
+                    <Lock className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                    <input 
+                        onChange={(e)=>{setPassword(e.target.value)}} 
+                        type="password" 
+                        placeholder='Password' 
+                        value={password}
+                        disabled={loading}
+                        className='w-full pl-10 pr-4 py-3 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--message-outgoing)] focus:border-transparent transition-all placeholder-gray-400'
+                    />
+                </div>
+
+                <div className="flex justify-end">
+                    <a href="#" className="text-xs font-semibold text-[var(--message-outgoing)] hover:underline">Forgot Password?</a>
+                </div>
+
                 <button 
                     type="submit" 
                     disabled={loading}
-                    className='bg-[var(--message-outgoing)] text-white py-3 px-6 rounded-lg font-semibold hover:bg-[var(--message-outgoing-hover)] transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed'
+                    className='w-full bg-[var(--message-outgoing)] text-white py-3.5 rounded-xl font-bold shadow-lg shadow-pink-200 hover:shadow-pink-300 hover:bg-[var(--message-outgoing-hover)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2'
                 >
-                    {loading ? 'Logging in...' : 'Login'}
+                    {loading ? <Loader2 className="animate-spin" size={20} /> : 'Login'}
                 </button>
             </form>
-            <p className='text-sm text-gray-500'>Create a new account? <a href="/register" className='text-[var(--message-outgoing)] font-semibold hover:underline'>Register</a></p>
+            <p className='mt-8 text-sm text-gray-500'>
+                Don't have an account? 
+                <a href="/register" className='ml-1 text-[var(--message-outgoing)] font-bold hover:underline'>Register</a>
+            </p>
         </div>
     </div>
   )
