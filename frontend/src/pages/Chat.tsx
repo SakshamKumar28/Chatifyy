@@ -4,6 +4,7 @@ import api from '../utils/api';
 import { Search, Send, MessageSquare, UserPlus, Users, Bell, Check, ChevronLeft, Ghost, RefreshCw, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { io, Socket } from 'socket.io-client';
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -191,10 +192,10 @@ const Chat = () => {
   const handleSendRequest = async (targetId: string) => {
     try {
         await api.post('/friends/request', { userId: targetId });
-        alert('Friend request sent!');
+        toast.success('Friend request sent!');
         setSearchResults(prev => prev.filter(u => u._id !== targetId));
     } catch (err: any) {
-        alert(err.response?.data?.message || "Failed");
+        toast.error(err.response?.data?.message || "Failed");
     }
   };
 
@@ -210,7 +211,7 @@ const Chat = () => {
 
         setActiveTab('FRIENDS');
     } catch (err: any) {
-        alert(err.response?.data?.message || "Failed");
+        toast.error(err.response?.data?.message || "Failed");
     }
   };
 
@@ -224,7 +225,7 @@ const Chat = () => {
         setFriends(prev => prev.filter(f => f._id !== friendId));
         if (selectedChat?._id === friendId) setSelectedChat(null);
     } catch (err: any) {
-        alert(err.response?.data?.message || "Failed to remove friend");
+        toast.error(err.response?.data?.message || "Failed to remove friend");
     }
   };
 
@@ -307,7 +308,7 @@ const Chat = () => {
             setMessage('');
         }
     } catch (err: any) {
-        alert(`Failed to send: ${err.response?.data?.message}`);
+        toast.error(`Failed to send: ${err.response?.data?.message}`);
     }
   };
 

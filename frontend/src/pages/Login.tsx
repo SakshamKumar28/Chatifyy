@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { toast } from "sonner"
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import api from "../utils/api"
@@ -24,7 +25,9 @@ const Login = () => {
 
         }catch(err: any){
             console.error('Login failed: ', err);
-            setError(err.response?.data?.message || 'Login failed');
+            const msg = err.response?.data?.message || 'Login failed';
+            setError(msg);
+            toast.error(msg);
         }finally{
             setLoading(false);
         }

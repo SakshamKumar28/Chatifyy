@@ -4,6 +4,7 @@ import Register from './pages/Register';
 import Chat from './pages/Chat';
 import ProtectedRoute from './components/ProtectedRoute';
 import Landing from './pages/Landing';
+import { Toaster } from './components/ui/sonner';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
         />
         <Route path='*' element={<Navigate to='/' replace />} />
       </Routes>
+      <Toaster />
     </>
   )
 }

@@ -1,6 +1,7 @@
 import api from "../utils/api"
 import React, { useState } from 'react'
 import { motion } from 'motion/react'
+import { toast } from "sonner"
 import { useNavigate } from 'react-router-dom';
 
 const Register = () => {
@@ -35,7 +36,9 @@ const Register = () => {
             navigate('/chat');
         } catch (error: any) {
             console.error("Registration failed:", error);
-            setError(error.response?.data?.message || 'Registration failed');
+            const msg = error.response?.data?.message || 'Registration failed';
+            setError(msg);
+            toast.error(msg);
         }finally{
             setLoading(false);
         }
