@@ -85,7 +85,7 @@ const Landing = () => {
           >
              {/* Replace this with a real screenshot or generated image later */}
              <div className="aspect-[16/9] bg-gradient-to-br from-gray-50 to-gray-100 relative flex items-center justify-center overflow-hidden group hover:cursor-none">
-                 <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=2574&auto=format&fit=crop')] bg-cover bg-center opacity-90 transition-transform duration-700 group-hover:scale-105"></div>
+                 <div className="absolute inset-0 bg-[url('https://i.pinimg.com/1200x/d9/e3/85/d9e3859a8778a363b4e37fb1e2062795.jpg')] bg-cover bg-center opacity-90 transition-transform duration-700 group-hover:scale-105"></div>
                  
                  {/* Floating Badges */}
                  <motion.div 
