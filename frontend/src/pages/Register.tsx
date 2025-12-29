@@ -1,6 +1,7 @@
 import api from "../utils/api"
 import React, { useState } from 'react'
 import { motion } from 'motion/react'
+import { useNavigate } from 'react-router-dom';
 
 const Register = () => {
     const [username, setUsername] = useState('');
@@ -10,6 +11,7 @@ const Register = () => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -30,7 +32,7 @@ const Register = () => {
             const response = await api.post('/auth/register', { username, email, password, gender });
             console.log('Registration successful:', response.data);
             localStorage.setItem('token', response.data.token);
-            window.location.href = '/login';
+            navigate('/chat');
         } catch (error: any) {
             console.error("Registration failed:", error);
             setError(error.response?.data?.message || 'Registration failed');

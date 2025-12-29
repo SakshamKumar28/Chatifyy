@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { motion } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
 import api from "../utils/api"
 
 const Login = () => {
@@ -7,6 +8,7 @@ const Login = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
 
     const arr = Array.from({ length: 30 }, (_, i) => i);
 
@@ -18,7 +20,7 @@ const Login = () => {
             const response = await api.post('/auth/login', { email, password });
             console.log('Login successful: ', response.data);
             localStorage.setItem('token', response.data.token);
-            window.location.href = '/';
+            navigate('/chat');
 
         }catch(err: any){
             console.error('Login failed: ', err);

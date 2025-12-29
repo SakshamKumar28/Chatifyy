@@ -14,6 +14,7 @@ import errorMiddleware from './middleware/errorMiddleware.js';
 import authRoutes from './routes/authRoute.js';
 import chatRoutes from './routes/chatRoute.js';
 import messageRoutes from './routes/messageRoute.js';
+import friendRoutes from './routes/friendRoute.js';
 
 import socketHandler from './socket/socket.js';
 
@@ -75,6 +76,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/friends', friendRoutes);
 
 /* ---------------- ERROR HANDLER ---------------- */
 app.use(errorMiddleware);
