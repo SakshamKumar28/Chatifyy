@@ -14,6 +14,11 @@ const socketHandler = (io) => {
 
       socket.join(userId);
       socket.userId = userId; // store for reference
+      
+      // Track Online Status
+      userSocketMap[userId] = socket.id;
+      io.emit('getOnlineUsers', Object.keys(userSocketMap));
+
       console.log(`👤 User ${userId} joined room ${userId}`);
 
       // Join all Group Chat Rooms

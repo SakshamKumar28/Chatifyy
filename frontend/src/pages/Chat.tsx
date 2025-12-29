@@ -19,6 +19,7 @@ interface User {
   avatar?: string;
   isGroup?: boolean;
   groupName?: string;
+  unreadCount?: number;
 }
 
 interface Message {
@@ -62,6 +63,7 @@ const Chat = () => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
   const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -113,16 +115,42 @@ const Chat = () => {
         console.log('socket disconnected');
     });
 
+    socketRef.current.on('getOnlineUsers', (users: string[]) => {
+        setOnlineUsers(users);
+    });
+
     // STANDARD CHAT
-    socketRef.current.on('receiveMessage', (msg: Message) => {
-      const activeChat = selectedChatRef.current;
-      const isFromActiveChat = activeChat && (msg.senderId === activeChat._id || msg.senderId === user._id);
+    socketRef.current.on('receiveMessage', (msg: any) => {
+      // If message is for currently open chat, do nothing / append
+      // If message is for another chat, find it in 'friends' list and increment unread
       
-      if (isFromActiveChat) {
+      const activeChatId = selectedChatRef.current?._id;
+      // Note: For groups msg.chat is populated or id. For 1-on-1 we check sender.
+      const msgChatId = msg.chat?._id || msg.chat; 
+      
+      const isCurrentChat = (selectedChatRef.current?.isGroup && activeChatId === msgChatId) ||
+                            (!selectedChatRef.current?.isGroup && (msg.senderId === activeChatId || msg.senderId === user?._id));
+
+      if (isCurrentChat) {
          setMessages(prev => {
             if (prev.some(m => m._id === msg._id)) return prev;
             return [...prev, msg];
          });
+         // Mark read immediately if window focused? For now relying on click.
+      } else {
+         // Increment badge
+         setFriends(prev => prev.map(f => {
+             // If Group Match
+             if (f.isGroup && f._id === msgChatId) {
+                 return { ...f, unreadCount: (f.unreadCount || 0) + 1 };
+             }
+             // If 1-on-1 Match (sender is friend)
+             if (!f.isGroup && f._id === msg.senderId) {
+                 return { ...f, unreadCount: (f.unreadCount || 0) + 1 };
+             }
+             return f;
+         }));
+         toast.info(`New message from ${msg.sender?.username || 'someone'}`);
       }
     });
 
@@ -158,17 +186,48 @@ const Chat = () => {
     const fetchProfileAndData = async () => {
       try {
         const profileRes = await api.get('/auth/profile');
-        setUser(profileRes.data.user);
+        const currentUser = profileRes.data.user;
+        setUser(currentUser);
 
+        // Fetch Friends (Users)
         const friendsRes = await api.get('/friends');
-        setFriends(friendsRes.data.data);
+        let friendsList = friendsRes.data.data;
+
+        // Fetch Chats (to get persistent Groups & Unread Counts)
+        const chatsRes = await api.get(`/chats/${currentUser._id}`);
+        const chats = chatsRes.data.data;
+
+        // Map unread counts and merge Groups into "friends" list
+        const processedList = friendsList.map((f: User) => {
+            // Find chat with this friend
+            // Note: Simplification. Ideally we use Chat Objects for everything.
+            // But we have a legacy "Friends" list view. 
+            // We'll find 1-on-1 chat for this friend.
+            const chat = chats.find((c: any) => !c.isGroup && c.participants.some((p: any) => p._id === f._id));
+            const count = chat?.unreadCounts?.[currentUser._id] || 0;
+            return { ...f, unreadCount: count };
+        });
+
+        // Add Groups to the list
+        const groups = chats.filter((c: any) => c.isGroup).map((g: any) => ({
+             _id: g._id,
+             username: g.groupName, // visual hack
+             isGroup: true,
+             groupName: g.groupName,
+             avatar: undefined, // default group icon
+             unreadCount: g.unreadCounts?.[currentUser._id] || 0
+        }));
+
+        setFriends([...groups, ...processedList]);
 
         const repoRes = await api.get('/friends/requests');
         setRequests(repoRes.data.data);
 
-      } catch {
-        localStorage.removeItem('token');
-        navigate('/login');
+      } catch (err) {
+        console.error("Fetch Data Error:", err);
+        // Do not force logout on minor fetch error if token is valid, but good for now if 401
+        // localStorage.removeItem('token');
+        // navigate('/login');
       } finally {
         setLoading(false);
       }
@@ -361,6 +420,37 @@ const Chat = () => {
     };
 
     fetchChatHistory();
+
+    // Mark as Read
+    if (selectedChat.unreadCount && selectedChat.unreadCount > 0) {
+        // If Group, use ID. If 1-on-1 we need Chat ID.
+        // Issue: We don't have Chat ID for 1-on-1 in 'friends' list item easily unless we mapped it.
+        // For Group, 'selectedChat._id' IS the Chat ID.
+        // For 1-on-1, 'selectedChat._id' is User ID.
+        
+        // Quick fix: Call getOrCreate to get ID, then mark read? Too many calls.
+        // Better: In 'fetchChats' mapping, we should have stored 'chatId' for 1-on-1 users too.
+        // But for now, let's try to infer or just call the 'mark read' endpoint.
+        // Actually, we can just call 'getOrCreateChat' in background which returns the chat, then mark read.
+        // Or updated 'fetchChatHistory' (which calls /chats) could mark it read? 
+        // Let's optimize: We update the 'friends' list state immediately to 0. 
+        setFriends(prev => prev.map(f => f._id === selectedChat._id ? { ...f, unreadCount: 0 } : f));
+        
+        // Then call backend
+        const markRead = async () => {
+             // For Group
+             if (selectedChat.isGroup) {
+                 await api.post(`/chats/${selectedChat._id}/read`);
+             } else {
+                 // For 1-on-1, get chat first
+                 const res = await api.post('/chats', { userId2: selectedChat._id });
+                 const chatId = res.data.data._id;
+                 await api.post(`/chats/${chatId}/read`);
+             }
+        };
+        markRead();
+    }
+
   }, [selectedChat, user, activeTab]);
 
   const handleSendMessage = async () => {
@@ -595,18 +685,31 @@ const Chat = () => {
                         )}
                         <div>
                             <p className="font-semibold text-sm text-gray-800">{u.isGroup ? u.groupName : u.username}</p>
-                            {!u.isGroup && <p className="text-xs text-green-500">Online</p>}
+                            {!u.isGroup && (
+                                <p className={`text-xs ${onlineUsers.includes(u._id) ? 'text-green-500' : 'text-gray-400'}`}>
+                                    {onlineUsers.includes(u._id) ? 'Online' : 'Offline'}
+                                </p>
+                            )}
                             {u.isGroup && <p className="text-xs text-gray-400">Group</p>}
                         </div>
                     </div>
-                    <Button 
-                        size="icon" 
-                        variant="ghost" 
-                        className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full"
-                        onClick={(e) => handleRemoveFriend(u._id, e)}
-                    >
-                        <Trash2 size={16} />
-                    </Button>
+                    
+                    <div className="flex flex-col items-end gap-2">
+                        {u.unreadCount && u.unreadCount > 0 ? (
+                            <div className="bg-red-500 text-white text-[10px] font-bold h-5 w-5 flex items-center justify-center rounded-full animate-bounce">
+                                {u.unreadCount}
+                            </div>
+                        ) : null}
+
+                        <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full"
+                            onClick={(e) => handleRemoveFriend(u._id, e)}
+                        >
+                            <Trash2 size={16} />
+                        </Button>
+                    </div>
                 </div>
             ))}
 
@@ -779,9 +882,12 @@ const Chat = () => {
                             )}
                             <div>
                                 <h2 className="text-lg font-bold text-gray-800 leading-tight">{selectedChat.isGroup ? selectedChat.groupName : selectedChat.username}</h2>
-                                {!selectedChat.isGroup && <span className="flex items-center gap-1.5 mt-0.5 text-xs text-green-500">
-                                    <span className="h-2 w-2 rounded-full bg-green-500"></span> Online
-                                </span>}
+                                {!selectedChat.isGroup && (
+                                    <span className={`flex items-center gap-1.5 mt-0.5 text-xs ${onlineUsers.includes(selectedChat._id) ? 'text-green-500' : 'text-gray-400'}`}>
+                                       <span className={`h-2 w-2 rounded-full ${onlineUsers.includes(selectedChat._id) ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                                       {onlineUsers.includes(selectedChat._id) ? 'Online' : 'Offline'}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>

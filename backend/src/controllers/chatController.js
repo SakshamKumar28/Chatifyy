@@ -87,6 +87,18 @@ export const sendMessage = async (req, res) => {
     });
 
     chat.messages.push(newMessage._id);
+    
+    // Update Unread Counts
+    if (!chat.unreadCounts) chat.unreadCounts = new Map();
+    
+    chat.participants.forEach(p => {
+        const pId = p.toString();
+        if (pId !== senderId.toString()) {
+            const current = chat.unreadCounts.get(pId) || 0;
+            chat.unreadCounts.set(pId, current + 1);
+        }
+    });
+
     chat.updatedAt = new Date();
     await chat.save();
     console.log(`✅ [sendMessage] Saved to chat ${chat._id}. Total msgs: ${chat.messages.length}`);
@@ -120,6 +132,26 @@ export const sendMessage = async (req, res) => {
       error: err.message,
     });
   }
+};
+
+/* -------------------------------- MARK CHAT READ -------------------------------- */
+export const markChatRead = async (req, res) => {
+    try {
+        const { chatId } = req.params;
+        const userId = req.user.id;
+
+        const chat = await Chat.findById(chatId);
+        if(!chat) return res.status(404).json({ message: "Chat not found" });
+
+        if(chat.unreadCounts) {
+            chat.unreadCounts.set(userId, 0);
+            await chat.save();
+        }
+
+        res.status(200).json({ message: "Marked as read" });
+    } catch (err) {
+         res.status(500).json({ error: err.message });
+    }
 };
 
 /* -------------------------------- CREATE GROUP CHAT -------------------------------- */

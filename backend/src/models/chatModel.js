@@ -6,6 +6,11 @@ const chatSchema = new mongoose.Schema({
     isGroup: { type: Boolean, default: false },
     groupName: { type: String, trim: true },
     groupAdmin: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    unreadCounts: {
+        type: Map,
+        of: Number,
+        default: {}
+    }
 }, { timestamps: true });
 
 const Chat = mongoose.model('Chat', chatSchema);
