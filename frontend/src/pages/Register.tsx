@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import { useNavigate } from 'react-router-dom';
 
 const Register = () => {
+    const [fullName, setFullName] = useState('');
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -12,7 +13,32 @@ const Register = () => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    
+    // Suggestion State
+    const [suggestions, setSuggestions] = useState<string[]>([]);
+    const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+    const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+
     const navigate = useNavigate();
+
+    const checkUsername = async (u: string) => {
+        if (!u || u.length < 3) return;
+        setIsCheckingUsername(true);
+        try {
+            const res = await api.post('/auth/check-username', { username: u });
+            if (res.data.available) {
+                setUsernameAvailable(true);
+                setSuggestions([]);
+            } else {
+                setUsernameAvailable(false);
+                setSuggestions(res.data.suggestions || []);
+            }
+        } catch (err) {
+            console.error("Error checking username", err);
+        } finally {
+            setIsCheckingUsername(false);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -30,7 +56,7 @@ const Register = () => {
 
         setLoading(true);
         try {
-            const response = await api.post('/auth/register', { username, email, password, gender });
+            const response = await api.post('/auth/register', { fullName, username, email, password, gender });
             console.log('Registration successful:', response.data);
             localStorage.setItem('token', response.data.token);
             navigate('/chat');
@@ -79,13 +105,50 @@ const Register = () => {
                     </div>
                 )}
                 <input 
-                    onChange={(e)=>{setUsername(e.target.value)}} 
+                    onChange={(e)=>{setFullName(e.target.value)}} 
                     type="text" 
-                    placeholder='Username' 
-                    value={username}
+                    placeholder='Full Name' 
+                    value={fullName}
                     disabled={loading}
                     className='px-4 py-3 text-[0.95rem] rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[var(--message-outgoing)] placeholder-gray-400 disabled:bg-gray-100'
                 />
+                <div className="flex flex-col gap-1">
+                    <input 
+                        onChange={(e)=>{
+                            setUsername(e.target.value);
+                            setUsernameAvailable(null);
+                            setSuggestions([]);
+                        }} 
+                        onBlur={(e) => checkUsername(e.target.value)}
+                        type="text" 
+                        placeholder='Username' 
+                        value={username}
+                        disabled={loading}
+                        className={`px-4 py-3 text-[0.95rem] rounded-lg border ${usernameAvailable === false ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:ring-2 focus:ring-[var(--message-outgoing)] placeholder-gray-400 disabled:bg-gray-100`}
+                    />
+                    {isCheckingUsername && <span className="text-xs text-gray-500 px-1">Checking availability...</span>}
+                    {usernameAvailable === true && <span className="text-xs text-green-600 px-1">Username available!</span>}
+                    {usernameAvailable === false && (
+                        <div className="px-1">
+                            <span className="text-xs text-red-500">Username taken. Suggestions:</span>
+                            <div className="flex gap-2 mt-1 flex-wrap">
+                                {suggestions.map(s => (
+                                    <span 
+                                        key={s} 
+                                        onClick={() => {
+                                            setUsername(s);
+                                            setUsernameAvailable(true);
+                                            setSuggestions([]);
+                                        }}
+                                        className="text-xs bg-gray-100 border border-gray-300 rounded px-2 py-1 cursor-pointer hover:bg-gray-200"
+                                    >
+                                        {s}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
                 <input 
                     onChange={(e)=>{setEmail(e.target.value)}} 
                     type="email" 

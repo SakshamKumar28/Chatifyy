@@ -5,10 +5,10 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export const register = async (req, res) => {
-  const { username, email, password, gender, avatar } = req.body;
+  const { username, email, password, gender, avatar, fullName } = req.body;
   //Registration Logic Here
   try {
-    if (!email || !password || !username || !gender) {
+    if (!email || !password || !username || !gender || !fullName) {
       return res
         .status(400)
         .json({ message: "All fields are required." });
@@ -24,6 +24,7 @@ export const register = async (req, res) => {
 
     const newUser = new User({
       username,
+      fullName,
       email,
       password: hashedPassword,
       gender,
@@ -48,6 +49,35 @@ export const register = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: "Server Error", error: err.message });
   }
+};
+
+export const checkUsername = async (req, res) => {
+    try {
+        const { username } = req.body;
+        if (!username) return res.status(400).json({ message: "Username required" });
+
+        const user = await User.findOne({ username });
+        
+        if (!user) {
+            return res.status(200).json({ available: true, message: "Username available" });
+        }
+
+        // Generate suggestions
+        const suggestions = [];
+        const randomSuffix = () => Math.floor(Math.random() * 1000);
+        suggestions.push(`${username}${randomSuffix()}`);
+        suggestions.push(`${username}_${randomSuffix()}`);
+        suggestions.push(`${username}.${randomSuffix()}`);
+        
+        res.status(200).json({ 
+            available: false, 
+            message: "Username taken", 
+            suggestions 
+        });
+
+    } catch (err) {
+        res.status(500).json({ message: "Server Error", error: err.message });
+    }
 };
 
 export const login = async (req, res) => {
