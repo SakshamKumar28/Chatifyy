@@ -1,6 +1,8 @@
 import Message from '../models/messageModel.js';
 import Chat from '../models/chatModel.js';
 
+const userSocketMap = {}; // { userId: socketId }
+
 const socketHandler = (io) => {
   io.on('connection', (socket) => {
     console.log(`🟢 Client connected: ${socket.id}`);
@@ -44,6 +46,10 @@ const socketHandler = (io) => {
     /* ---------------- DISCONNECT ---------------- */
     socket.on('disconnect', () => {
       console.log(`🔴 Client disconnected: ${socket.id} (user: ${socket.userId || 'unknown'})`);
+      if (socket.userId) {
+          delete userSocketMap[socket.userId];
+          io.emit('getOnlineUsers', Object.keys(userSocketMap));
+      }
       removeFromQueue(socket.id);
     });
 
