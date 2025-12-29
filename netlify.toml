@@ -1,3 +1,11 @@
+[build]
+  command = "cd frontend && npm run build"
+  publish = "frontend/dist"
+  functions = "functions"
+
+[build.environment]
+  NODE_VERSION = "20"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
@@ -15,5 +23,15 @@
 
 [[headers]]
   for = "*.mjs"
+  [headers.values]
+    Content-Type = "application/javascript"
+
+[[headers]]
+  for = "*.tsx"
+  [headers.values]
+    Content-Type = "application/javascript"
+
+[[headers]]
+  for = "*.ts"
   [headers.values]
     Content-Type = "application/javascript"
