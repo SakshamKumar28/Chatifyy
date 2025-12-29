@@ -48,49 +48,65 @@ const getUniqueChat = async (user1, user2) => {
 export const sendMessage = async (req, res) => {
   try {
     const senderId = req.user?.id || req.body.senderId; 
-    const { receiverId, content } = req.body;
+    const { receiverId, content, chatId } = req.body;
 
-    if (!receiverId || !content?.trim()) {
+    if ((!receiverId && !chatId) || !content?.trim()) {
       return res.status(400).json({ message: "Invalid message data" });
     }
 
-    console.log(`📝 [REST] Saving message ${senderId} -> ${receiverId}`);
+    console.log(`📝 [REST] Saving message ${senderId} -> ${receiverId || chatId}`);
+
+    let chat;
+
+    if (chatId) {
+        // Group Message or Explicit Chat
+         chat = await Chat.findById(chatId);
+         if (!chat) return res.status(404).json({ message: "Chat not found" });
+
+         // Verify user is in chat
+         if (!chat.participants.includes(senderId)) {
+             return res.status(403).json({ message: "User not in this chat" });
+         }
+    } else {
+        // 1-on-1 Legacy
+        chat = await getUniqueChat(senderId, receiverId);
+        if (!chat) {
+            chat = await Chat.create({
+                participants: [senderId, receiverId],
+                messages: [],
+            });
+            console.log(`🆕 [sendMessage] Created NEW chat: ${chat._id}`);
+        }
+    }
 
     const newMessage = await Message.create({
       sender: senderId,
-      receiver: receiverId,
+      receiver: receiverId || null,
+      chat: chat._id,
       content: content.trim(),
     });
-
-    // Use Helper
-    let chat = await getUniqueChat(senderId, receiverId);
-
-    if (!chat) {
-      chat = await Chat.create({
-        participants: [senderId, receiverId],
-        messages: [],
-      });
-      console.log(`🆕 [sendMessage] Created NEW chat: ${chat._id}`);
-    } else {
-      console.log(`📂 [sendMessage] Found existing chat: ${chat._id}`);
-    }
 
     chat.messages.push(newMessage._id);
     chat.updatedAt = new Date();
     await chat.save();
     console.log(`✅ [sendMessage] Saved to chat ${chat._id}. Total msgs: ${chat.messages.length}`);
 
-    const populatedMessage = {
-       _id: newMessage._id,
-       senderId,
-       receiverId,
-       content: newMessage.content,
-       createdAt: newMessage.createdAt
-    };
+    const populatedMessage = await Message.findById(newMessage._id)
+        .populate("sender", "username avatar")
+        .populate("receiver", "username avatar")
+        .populate("chat");
 
     if (req.io) {
-        req.io.to(receiverId).emit('receiveMessage', populatedMessage);
-        console.log(`📡 [REST] Emitted to ${receiverId}`);
+        if(chat.isGroup) {
+            // Emit to Room (Chat ID)
+            req.io.to(chat._id.toString()).emit('receiveMessage', populatedMessage);
+            console.log(`📡 [REST] Emitted to Group Room ${chat._id}`);
+        } else {
+            // Emitting to receiver for 1-on-1
+            const rId = receiverId || chat.participants.find(p => p.toString() !== senderId.toString());
+            req.io.to(rId.toString()).emit('receiveMessage', populatedMessage); 
+            console.log(`📡 [REST] Emitted to ${rId}`);
+        }
     }
 
     res.status(201).json({
@@ -104,6 +120,46 @@ export const sendMessage = async (req, res) => {
       error: err.message,
     });
   }
+};
+
+/* -------------------------------- CREATE GROUP CHAT -------------------------------- */
+export const createGroupChat = async (req, res) => {
+    try {
+        const { users, name } = req.body;
+        const currentUserId = req.user.id;
+
+        if (!users || !name) {
+            return res.status(400).json({ message: "Please fill all fields" });
+        }
+
+        // Parse users if sent as string
+        let participants = users;
+        if(typeof users === 'string') {
+             participants = JSON.parse(users);
+        }
+
+        if (participants.length < 2) {
+             return res.status(400).json({ message: "More than 2 users are required to form a group chat" });
+        }
+
+        participants.push(currentUserId);
+
+        const groupChat = await Chat.create({
+            groupName: name,
+            participants: participants,
+            isGroup: true,
+            groupAdmin: currentUserId,
+        });
+
+        const fullGroupChat = await Chat.findOne({ _id: groupChat._id })
+            .populate("participants", "-password")
+            .populate("groupAdmin", "-password");
+
+        res.status(200).json(fullGroupChat);
+
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 };
 
 /* -------------------------------- GET MESSAGES -------------------------------- */

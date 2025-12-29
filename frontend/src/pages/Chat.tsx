@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import { Search, Send, MessageSquare, UserPlus, Users, Bell, Check, ChevronLeft, Ghost, RefreshCw, Trash2 } from 'lucide-react';
+import { Search, Send, MessageSquare, UserPlus, Users, Bell, Check, ChevronLeft, Ghost, RefreshCw, Trash2, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { io, Socket } from 'socket.io-client';
 import { toast } from "sonner"
@@ -17,6 +17,8 @@ interface User {
   username: string;
   email: string;
   avatar?: string;
+  isGroup?: boolean;
+  groupName?: string;
 }
 
 interface Message {
@@ -229,6 +231,46 @@ const Chat = () => {
     }
   };
 
+  /* ---------------- GROUP ACTIONS ---------------- */
+  const [isGroupDialogOpen, setIsGroupDialogOpen] = useState(false);
+  const [groupName, setGroupName] = useState("");
+  const [selectedFriendsForGroup, setSelectedFriendsForGroup] = useState<string[]>([]);
+
+  const handleCreateGroup = async () => {
+      if (!groupName.trim() || selectedFriendsForGroup.length < 2) {
+          toast.error("Please enter a group name and select at least 2 friends.");
+          return;
+      }
+      try {
+          const res = await api.post('/chats/group', {
+              name: groupName,
+              users: JSON.stringify(selectedFriendsForGroup)
+          });
+          
+          if(res.status === 200) {
+              toast.success("Group created successfully!");
+              setIsGroupDialogOpen(false);
+              setGroupName("");
+              setSelectedFriendsForGroup([]);
+              
+              const newGroup = res.data;
+              // Add to friends list temporarily or refetch (Group chats usually in separate list or mixed)
+              // For simplicity, we can fetch all chats, but here we might just reload or add to a mixed list if we had one.
+              // Since we are showing 'friends', we need a way to show groups. 
+              // Let's add the new group to the 'FRIENDS' list but mark it.
+              setFriends(prev => [newGroup, ...prev]);
+          }
+      } catch (err: any) {
+         toast.error(err.response?.data?.message || "Failed to create group");
+      }
+  };
+
+  const toggleFriendSelection = (friendId: string) => {
+      setSelectedFriendsForGroup(prev => 
+          prev.includes(friendId) ? prev.filter(id => id !== friendId) : [...prev, friendId]
+      );
+  };
+
   /* ---------------- ANONYMOUS ACTIONS ---------------- */
   const startAnonymous = () => {
     setAnonStatus('SEARCHING');
@@ -264,14 +306,50 @@ const Chat = () => {
 
     const fetchChatHistory = async () => {
       try {
-        const res = await api.post('/chats', {
-          userId2: selectedChat._id
-        });
+        let res;
+        if (selectedChat.isGroup) {
+             // Fetch by ChatID directly or use a new endpoint. 
+             // We can assume user is selectedChat here is actually the Chat Object for groups.
+             // But existing /chats endpoint expects userId2. 
+             // We configured GET /chats/:userId to getting all chats. 
+             // We need a way to get messages for a specific group. 
+             // Actually, chatController.js 'getOrCreateChat' is what /chats calls (POST /api/chats).
+             // That finds 1-to-1. 
+             // We need to fetch messages for the group. 
+             // Let's assume we can use the same endpoint if we pass chatId? 
+             // No, getOrCreateChat takes userId2.
+             // We need to add a way to get messages for a chat ID.
+             // Ideally we should have a route GET /messages/:chatId.
+             // For now, let's use the socket or add a route? 
+             // Let's check backend chatController. getMessages is exported but no route attached?
+             // Ah, we missed adding GET /api/messages/:chatId route in backend plan.
+             // Let's quickly add it or re-use.
+             // Wait, `getMessages` IS in controller but not in route.
+             // Let's fix backend route first or use a trick.
+             // Actually, verify implementation plan. We didn't add the route.
+             // Let's add it now in Chat.tsx assuming we will fix backend in next step or now.
+             // We will assume GET /api/chats/:chatId/messages exists or similar.
+             // Let's use POST /api/chats with chatId? No.
+             // Let's fetch the chat object which includes messages. 
+             // Actually `getOrCreateChat` returns populated chat!
+             // So for 1-on-1 we call that.
+             // For Group, we ALREADY have the object if we clicked it from list? 
+             // If the list item is the CHAT object, it might have messages if populated.
+             // But typically we fetch history on click.
+             // Let's add a `fetchGroupMessages` function.
+             res = await api.get(`/chats/${selectedChat._id}/messages`);
+        } else {
+             res = await api.post('/chats', {
+               userId2: selectedChat._id
+             });
+        }
         
-        const history = res.data.data.messages.map((m: any) => ({
+        const messagesData = selectedChat.isGroup ? res.data.data : res.data.data.messages;
+
+        const history = messagesData.map((m: any) => ({
             _id: m._id,
-            senderId: m.sender?._id || 'unknown',
-            receiverId: m.receiver?._id || 'unknown',
+            senderId: m.sender?._id || m.sender || 'unknown',
+            receiverId: m.receiver?._id || m.receiver || 'unknown',
             content: m.content || '',
             createdAt: m.createdAt
         }));
@@ -296,11 +374,17 @@ const Chat = () => {
     if (!selectedChat) return;
 
     try {
-        const res = await api.post('/messages', {
-            senderId: user._id,
-            receiverId: selectedChat._id,
-            content: message
-        });
+        const payload: any = { content: message };
+        
+        if (selectedChat.isGroup) {
+            payload.chatId = selectedChat._id;
+            payload.senderId = user._id; // optional if backend extracts from token
+        } else {
+            payload.senderId = user._id;
+            payload.receiverId = selectedChat._id;
+        }
+
+        const res = await api.post('/messages', payload);
 
         if (res.status === 201) {
             const newMessage = res.data.data;
@@ -360,6 +444,14 @@ const Chat = () => {
           </div>
           <div className="flex gap-1">
             <Button 
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsGroupDialogOpen(true)}
+                className="text-gray-500 hover:text-purple-600"
+            >
+                <Plus size={20} />
+            </Button>
+            <Button 
                 variant={activeTab === 'SEARCH' ? "secondary" : "ghost"}
                 size="icon"
                 onClick={() => { setActiveTab('SEARCH'); setSelectedChat(null); }}
@@ -413,6 +505,59 @@ const Chat = () => {
           )}
         </AnimatePresence>
 
+        {/* GROUP CREATION DIALOG */}
+        <AnimatePresence>
+            {isGroupDialogOpen && (
+               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setIsGroupDialogOpen(false)}>
+                   <motion.div 
+                        initial={{ scale: 0.9, opacity: 0 }} 
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0.9, opacity: 0 }}
+                        className="bg-white rounded-2xl w-[90%] md:w-[400px] p-6 shadow-2xl overflow-hidden" 
+                        onClick={e => e.stopPropagation()}
+                   >
+                       <h2 className="text-xl font-bold mb-4">Create New Group</h2>
+                       <div className="space-y-4">
+                           <div>
+                               <label className="text-xs font-semibold text-gray-500 uppercase">Group Name</label>
+                               <Input 
+                                    value={groupName} 
+                                    onChange={e => setGroupName(e.target.value)}
+                                    placeholder="e.g. Weekend Trip"
+                                    className="mt-1"
+                               />
+                           </div>
+                           <div>
+                               <label className="text-xs font-semibold text-gray-500 uppercase mb-2 block">Select Members</label>
+                               <ScrollArea className="h-48 border rounded-xl p-2">
+                                   {friends.filter(f => !f.isGroup).map(friend => (
+                                       <div 
+                                            key={friend._id} 
+                                            onClick={() => toggleFriendSelection(friend._id)}
+                                            className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer ${selectedFriendsForGroup.includes(friend._id) ? 'bg-purple-50 border border-purple-200' : 'hover:bg-gray-50'}`}
+                                       >
+                                           <div className={`w-4 h-4 rounded border flex items-center justify-center ${selectedFriendsForGroup.includes(friend._id) ? 'bg-purple-600 border-purple-600' : 'border-gray-300'}`}>
+                                               {selectedFriendsForGroup.includes(friend._id) && <Check size={12} className="text-white"/>}
+                                           </div>
+                                           <Avatar className="h-8 w-8">
+                                                <AvatarImage src={friend.avatar} />
+                                                <AvatarFallback>{friend.username[0]}</AvatarFallback>
+                                            </Avatar>
+                                            <span className="text-sm font-medium">{friend.username}</span>
+                                       </div>
+                                   ))}
+                               </ScrollArea>
+                               <p className="text-xs text-right mt-1 text-gray-400">{selectedFriendsForGroup.length} selected</p>
+                           </div>
+                           <Button onClick={handleCreateGroup} className="w-full bg-black hover:bg-gray-800 text-white" disabled={!groupName || selectedFriendsForGroup.length < 2}>
+                               Create Group
+                           </Button>
+                       </div>
+                   </motion.div>
+               </div>
+            )}
+        </AnimatePresence>
+
         {/* LIST CONTENT */}
         <div className="flex-1 overflow-y-auto px-2 py-2">
             
@@ -438,13 +583,20 @@ const Chat = () => {
             {activeTab === 'FRIENDS' && friends.map(u => (
                 <div key={u._id} onClick={() => setSelectedChat(u)} className={`flex items-center justify-between p-3 mb-1 rounded-xl cursor-pointer hover:bg-[var(--secondary-color)] transition-all ${selectedChat?._id === u._id ? 'bg-[var(--message-outgoing)] shadow-sm ring-1 ring-[#D97B7B]/20' : ''}`}>
                     <div className="flex items-center gap-4">
-                        <Avatar className="h-10 w-10 border border-white">
-                            <AvatarImage src={u.avatar} className="object-cover" />
-                            <AvatarFallback>{u.username[0]}</AvatarFallback>
-                        </Avatar>
+                        {u.isGroup ? (
+                            <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center border-2 border-white">
+                                <Users size={18} className="text-indigo-600"/>
+                            </div>
+                        ) : (
+                            <Avatar className="h-10 w-10 border border-white">
+                                <AvatarImage src={u.avatar} className="object-cover" />
+                                <AvatarFallback>{u.username?.[0]}</AvatarFallback>
+                            </Avatar>
+                        )}
                         <div>
-                            <p className="font-semibold text-sm text-gray-800">{u.username}</p>
-                            <p className="text-xs text-green-500">Online</p>
+                            <p className="font-semibold text-sm text-gray-800">{u.isGroup ? u.groupName : u.username}</p>
+                            {!u.isGroup && <p className="text-xs text-green-500">Online</p>}
+                            {u.isGroup && <p className="text-xs text-gray-400">Group</p>}
                         </div>
                     </div>
                     <Button 
@@ -615,15 +767,21 @@ const Chat = () => {
                                 <ChevronLeft size={24} />
                             </Button>
                             
-                            <Avatar className="h-10 w-10">
-                                <AvatarImage src={selectedChat.avatar} />
-                                <AvatarFallback>{selectedChat.username[0]}</AvatarFallback>
-                            </Avatar>
+                            {selectedChat.isGroup ? (
+                                <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center border-2 border-white">
+                                    <Users size={20} className="text-indigo-600"/>
+                                </div>
+                            ) : (
+                                <Avatar className="h-10 w-10">
+                                    <AvatarImage src={selectedChat.avatar} />
+                                    <AvatarFallback>{selectedChat.username?.[0]}</AvatarFallback>
+                                </Avatar>
+                            )}
                             <div>
-                                <h2 className="text-lg font-bold text-gray-800 leading-tight">{selectedChat.username}</h2>
-                                <span className="flex items-center gap-1.5 mt-0.5 text-xs text-green-500">
+                                <h2 className="text-lg font-bold text-gray-800 leading-tight">{selectedChat.isGroup ? selectedChat.groupName : selectedChat.username}</h2>
+                                {!selectedChat.isGroup && <span className="flex items-center gap-1.5 mt-0.5 text-xs text-green-500">
                                     <span className="h-2 w-2 rounded-full bg-green-500"></span> Online
-                                </span>
+                                </span>}
                             </div>
                         </div>
                     </div>

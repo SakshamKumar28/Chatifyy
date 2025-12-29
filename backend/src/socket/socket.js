@@ -6,7 +6,7 @@ const socketHandler = (io) => {
     console.log(`🟢 Client connected: ${socket.id}`);
 
     /* ---------------- JOIN ROOM ---------------- */
-    socket.on('joinRoom', (userId) => {
+    socket.on('joinRoom', async (userId) => {
       if (!userId) {
         console.warn(`⚠️ joinRoom called without userId`);
         return;
@@ -15,6 +15,17 @@ const socketHandler = (io) => {
       socket.join(userId);
       socket.userId = userId; // store for reference
       console.log(`👤 User ${userId} joined room ${userId}`);
+
+      // Join all Group Chat Rooms
+      try {
+           const groups = await Chat.find({ participants: userId, isGroup: true });
+           groups.forEach(g => {
+               socket.join(g._id.toString());
+               console.log(`User ${userId} joined Group ${g.groupName} (${g._id})`);
+           });
+      } catch (err) {
+          console.error("Error joining group rooms:", err);
+      }
     });
 
     /* ---------------- SEND MESSAGE ---------------- */

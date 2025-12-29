@@ -6,9 +6,15 @@ A full-stack real-time chat application built with Node.js/Express and React/Typ
 
 - User Authentication (Register/Login)
 - Protected Routes
-- Real-time Messaging
-- User Profiles
-- Responsive Design with Tailwind CSS
+- Real-time Messaging (Socket.io)
+- Group Chats (Create Groups, Name Them, Add Friends)
+- Friend Management (Add/Remove/Accept Requests)
+- Anonymous Chat (Incognito Mode)
+- User Profiles & Avatars
+- Responsive Mobile Design
+- Custom Toast Notifications
+- Message History
+- User Search
 
 ## Project Structure
 
@@ -141,6 +147,9 @@ The frontend will run on `http://localhost:5173`
 - Axios for HTTP requests
 - Tailwind CSS for styling
 - Vite for build tooling
+- Sonner for toast notifications
+- Lucide React for icons
+- Framer Motion for animations
 
 ## Security Features
 
@@ -154,14 +163,10 @@ The frontend will run on `http://localhost:5173`
 
 ## Future Enhancements
 
-- Real-time messaging with Socket.io
-- Multiple chat rooms
-- User search functionality
-- Message history
-- User avatars and profiles
 - Typing indicators
 - Message reactions
 - File sharing
+- Voice/Video Calls
 
 ## License
 
