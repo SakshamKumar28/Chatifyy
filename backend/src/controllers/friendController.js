@@ -147,3 +147,29 @@ export const getFriendRequests = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+/* ---------------- REMOVE FRIEND ---------------- */
+export const removeFriend = async (req, res) => {
+  try {
+    const { friendId } = req.body;
+    const currentUserId = req.user.id;
+
+    if (!friendId) return res.status(400).json({ message: "Friend ID required" });
+
+    const currentUser = await User.findById(currentUserId);
+    const friendUser = await User.findById(friendId);
+
+    if (!friendUser) return res.status(404).json({ message: "User not found" });
+
+    // Remove from both friend lists
+    currentUser.friends = currentUser.friends.filter(id => id.toString() !== friendId);
+    friendUser.friends = friendUser.friends.filter(id => id.toString() !== currentUserId);
+
+    await currentUser.save();
+    await friendUser.save();
+
+    res.status(200).json({ message: "Friend removed successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

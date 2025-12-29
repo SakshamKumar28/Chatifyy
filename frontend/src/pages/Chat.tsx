@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import { Search, Send, MessageSquare, UserPlus, Users, Bell, Check, ChevronLeft, Ghost, RefreshCw } from 'lucide-react';
+import { Search, Send, MessageSquare, UserPlus, Users, Bell, Check, ChevronLeft, Ghost, RefreshCw, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { io, Socket } from 'socket.io-client';
 
@@ -214,6 +214,20 @@ const Chat = () => {
     }
   };
 
+
+  const handleRemoveFriend = async (friendId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if(!confirm("Are you sure you want to remove this friend?")) return;
+
+    try {
+        await api.post('/friends/remove', { friendId });
+        setFriends(prev => prev.filter(f => f._id !== friendId));
+        if (selectedChat?._id === friendId) setSelectedChat(null);
+    } catch (err: any) {
+        alert(err.response?.data?.message || "Failed to remove friend");
+    }
+  };
+
   /* ---------------- ANONYMOUS ACTIONS ---------------- */
   const startAnonymous = () => {
     setAnonStatus('SEARCHING');
@@ -421,15 +435,25 @@ const Chat = () => {
                  </div>
             )}
             {activeTab === 'FRIENDS' && friends.map(u => (
-                <div key={u._id} onClick={() => setSelectedChat(u)} className={`flex items-center gap-4 p-3 mb-1 rounded-xl cursor-pointer hover:bg-[var(--secondary-color)] transition-all ${selectedChat?._id === u._id ? 'bg-[var(--message-outgoing)] shadow-sm ring-1 ring-[#D97B7B]/20' : ''}`}>
-                    <Avatar className="h-10 w-10 border border-white">
-                        <AvatarImage src={u.avatar} className="object-cover" />
-                        <AvatarFallback>{u.username[0]}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                        <p className="font-semibold text-sm text-gray-800">{u.username}</p>
-                        <p className="text-xs text-green-500">Online</p>
+                <div key={u._id} onClick={() => setSelectedChat(u)} className={`flex items-center justify-between p-3 mb-1 rounded-xl cursor-pointer hover:bg-[var(--secondary-color)] transition-all ${selectedChat?._id === u._id ? 'bg-[var(--message-outgoing)] shadow-sm ring-1 ring-[#D97B7B]/20' : ''}`}>
+                    <div className="flex items-center gap-4">
+                        <Avatar className="h-10 w-10 border border-white">
+                            <AvatarImage src={u.avatar} className="object-cover" />
+                            <AvatarFallback>{u.username[0]}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                            <p className="font-semibold text-sm text-gray-800">{u.username}</p>
+                            <p className="text-xs text-green-500">Online</p>
+                        </div>
                     </div>
+                    <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full"
+                        onClick={(e) => handleRemoveFriend(u._id, e)}
+                    >
+                        <Trash2 size={16} />
+                    </Button>
                 </div>
             ))}
 
