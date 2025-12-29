@@ -67,9 +67,9 @@ const Register = () => {
                 />
             )
         })}
-        <div className="z-10 h-[82vh] w-[35vw] bg-[var(--secondary-color)] shadow-xl rounded-2xl flex flex-col items-center justify-evenly">
+        <div className="z-10 w-[90%] sm:w-[70%] md:w-[50%] lg:w-[35vw] min-h-[60vh] h-auto py-8 md:h-[82vh] md:py-0 bg-[var(--secondary-color)] shadow-xl rounded-2xl flex flex-col items-center justify-evenly">
             <h1 className='text-3xl font-bold text-[var(--message-outgoing)]'>Welcome to Chatifyy</h1>
-            <form onSubmit={handleSubmit} className='flex flex-col w-3/4 gap-5'>
+            <form onSubmit={handleSubmit} className='flex flex-col w-[85%] sm:w-3/4 gap-5'>
                 {error && (
                     <div className='px-[2rem] py-[0.5rem] bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded-lg text-sm'>
                         {error}
